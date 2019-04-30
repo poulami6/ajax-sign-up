@@ -1,0 +1,92 @@
+<!-- footer -->
+            <footer id="colophon" class="site-footer" style="background-image: url('<?php bloginfo('template_url'); ?>/images/curve-green.jpg');">
+                <div class="container">
+                    <div class="footer-top">
+                        <div class="footer_grid">
+                            <?php
+                                $fields = get_fields('newsletter_settings', 'option');
+                                if( $fields ){                             
+                                    foreach( $fields as $name => $value ){
+                                        if( $name == 'newsletter_text' ){
+                                            echo '<h5>'.$value.'</h5>';
+                                        }else{
+                                            echo '<p>'.$value.'</p>';
+                                        }
+                                     }
+                                }
+                            ?>                            
+                            <form onsubmit="return newsletter_check(this)" action="" method="post">
+                               <input type="hidden" value="s" name="na" >
+                                <ul class="newsletter-form">
+                                    <li><input type="text" placeholder="Email Address..." required="" name="ne" id="a" ></li>
+                                    <li><input type="submit" value="Sign Up"></li>
+                                </ul>
+                            </form>
+                        </div>
+                        <div class="footer_grid">
+                            <h5>Useful Links</h5>
+                            <?php 
+                                $args = array(
+                                    'theme_location' => 'useful-links',
+                                    'menu_class' => 'footer_menu',
+                                    'container'   => 'ul'                                    
+                                );
+                                wp_nav_menu( $args ); 
+                            ?>                           
+                        </div>
+
+                        <div class="footer_grid">
+                            <h5>Contact Information</h5>
+                            <ul class="footer_address">
+                                <li>
+                                    <i class="fa fa-map-marker"></i> 
+                                   <?php echo get_field('footer_address', 'option'); ?>
+                                </li>
+                                <li><i class="fa fa-phone"></i>
+                                     <a href="tel:<?php echo get_field('phone','option'); ?>">
+                                        <?php echo get_field('phone','option'); ?>
+                                    </a>
+                                </li>
+                                <li>
+                                    <i class="fa fa-envelope"></i> 
+                                    <a href="mailto:<?php echo get_field('email', 'option'); ?>">
+                                        <?php echo get_field('email', 'option'); ?>
+                                    </a>
+                                </li>
+                                <li>
+                                    <i class="fa fa-clock-o"></i> 
+                                    <?php echo get_field('timeings', 'option'); ?>
+                                </li>
+                            </ul>
+                        </div>
+                    </div><!-- footer-top -->
+
+                </div>
+
+                <div class="mini-footer">
+                    <div class="container">
+                        <p class="copyright"><?php echo get_field('copyright', 'option'); ?></p>
+                        <p class="social-icon">
+                            <a href="<?php echo get_field('facebbok_url', 'option'); ?>" title="facebook">
+                                <i class="fa fa-facebook"></i>
+                            </a>
+                            <a href="<?php echo get_field('twitter_url', 'option'); ?>" title="twitter">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                            <a href="<?php echo get_field('linked_in', 'option'); ?>" title="linkedin">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                            <a href="<?php echo get_field('printerest', 'option'); ?>" title="pinterest">
+                                <i class="fa fa-pinterest"></i>
+                            </a>
+                        </p>
+                    </div>    
+                </div>
+
+            </footer>
+
+        </div>
+    </div>
+	<?php wp_footer(); ?>	
+	</body>
+</html>
