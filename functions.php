@@ -1,814 +1,569 @@
-<?php
+﻿<?php
+/**
+ * VMS functions and definitions
+ *
+ * @link https://developer.wordpress.org/themes/basics/theme-functions/
+ * 
+ */
 
-//////////////////////////////////////////////////////////////////
+/**
+ * VMS only works in WordPress 4.7 or later.
+ */
 
-// Options Framework Functions
-
-//////////////////////////////////////////////////////////////////
-
-/* Set the file path based on whether the Options Framework is in a parent theme or child theme */
-
-
-
-if ( STYLESHEETPATH == TEMPLATEPATH ) {
-
-	define('OF_FILEPATH', TEMPLATEPATH);
-
-	define('OF_DIRECTORY', get_bloginfo('template_directory'));
-
-} else {
-
-	define('OF_FILEPATH', STYLESHEETPATH);
-
-	define('OF_DIRECTORY', get_bloginfo('stylesheet_directory'));
-
-}
-
-require_once (OF_FILEPATH . '/lib/index.php'); 
-
-
-
-define('PREFIX','sd_');
-
-
-
-add_action( 'init', 'register_my_menus' );
-
-function register_my_menus() {
-
-	register_nav_menus(
-
-		array(
-
-			'main-menu' => __( 'Main Menu' ),
-			
-			'useful-links' => __( 'Useful Links' ),
-
-		)
-
-	);
+// Include required files
+require get_parent_theme_file_path( '/functions/common-functions.php' );
+add_action( 'init', 'enqcustomscript' );
+function enqcustomscript(){
+$home_url = home_url();    
+wp_enqueue_script('script-js', get_template_directory_uri().'/js/jquery-2.2.4.js', array('jquery'), true);
+wp_enqueue_script('custom-js', get_template_directory_uri().'/js/customjs.js', array('jquery'), true);
+wp_enqueue_script('custom-js-ui', get_template_directory_uri().'/js/jquery-ui.js', array('jquery'), true);
+wp_enqueue_script('validate-js', get_template_directory_uri().'/js/jquery.validate.js', array('jquery'), true);
+wp_localize_script( 'custom-js', 'my_ajax', array( 'home_url' => $home_url, 'ajax_url'=> admin_url('admin-ajax.php')) );
 
 }
 
+require get_parent_theme_file_path() . '/functions/email_template.php';
+require get_parent_theme_file_path() . '/classes/class-users.php';
 
-
-//////////////////////////////////////////////////////////////////
-
-// Register widgetized areas, including two sidebars and four widget-ready columns in the footer.
-
-//////////////////////////////////////////////////////////////////
-
-
-
-function sdthemes_widgets_init() {
-
-	// Area 1, located at the top of the sidebar.
-
-	register_sidebar( array(
-
-		'name' => __( 'Main Sidebar', 'sdthemes' ),
-
-		'id' => 'home-widget-area',
-
-		'description' => __( 'The primary widget area', 'sdthemes' ),
-
-		'before_widget' => '<div class="add-place">',
-
-		'after_widget' => '</div>',
-
-		'before_title' => '<h3>',
-
-		'after_title' => '</h3>',
-
-	) );
-
-	
-
-	register_sidebar( array(
-
-		'name' => __( 'Primary Widget Area', 'sdthemes' ),
-
-		'id' => 'primary-widget-area',
-
-		'description' => __( 'The primary widget area', 'sdthemes' ),
-
-		'before_widget' => '<div class="widget %2$s">',
-
-		'after_widget' => '</div>',
-
-		'before_title' => '<h2>',
-
-		'after_title' => '</h2>',
-
-	) );	
-
+if ( version_compare( $GLOBALS['wp_version'], '4.7-alpha', '<' ) ) {
+    require get_template_directory() . '/inc/back-compat.php';
+    return;
 }
 
-
-
-add_action( 'widgets_init', 'sdthemes_widgets_init' );
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// Post thumbnails
-
-//////////////////////////////////////////////////////////////////
-
-if ( function_exists( 'add_theme_support' ) ) {
-
-	add_theme_support( 'post-thumbnails' );	
-	add_image_size( 'loop_service', 180, 180, true);
-	add_image_size( 'testimonial_image', 120, 120, true);
-
+/**
+ * MyFirstTheme's functions and definitions
+ *
+ * @package MyFirstTheme
+ * @since MyFirstTheme 1.0
+ */
+ 
+/**
+ * First, let's set the maximum content width based on the theme's design and stylesheet.
+ * This will limit the width of all uploaded images and embeds.
+ */
+if ( ! isset( $content_width ) )
+    $content_width = 800; /* pixels */
+ 
+if ( ! function_exists( 'vmstheme_setup' ) ) :
+/**
+ * Sets up theme defaults and registers support for various WordPress features.
+ *
+ * Note that this function is hooked into the after_setup_theme hook, which runs
+ * before the init hook. The init hook is too late for some features, such as indicating
+ * support post thumbnails.
+ */
+function vmstheme_setup() {
+ 
+    /**
+     * Make theme available for translation.
+     * Translations can be placed in the /languages/ directory.
+     */
+    load_theme_textdomain( 'vmstheme', get_template_directory() . '/languages' );
+ 
+    /**
+     * Add default posts and comments RSS feed links to <head>.
+     */
+    add_theme_support( 'automatic-feed-links' );
+ 
+    /**
+     * Enable support for post thumbnails and featured images.
+     */
+    add_theme_support( 'post-thumbnails' );
+ 
+    /**
+     * Add support for two custom navigation menus.
+     */
+    register_nav_menus( array(
+        'primary'   => __( 'Primary Menu', 'vmstheme' ),
+        'secondary' => __('Secondary Menu', 'vmstheme' )
+    ) );
+ 
+    /**
+     * Enable support for the following post formats:
+     * aside, gallery, quote, image, and video
+     */
+    add_theme_support( 'post-formats', array ( 'aside', 'gallery', 'quote', 'image', 'video' ) );
 }
-
-
-function remove_admin_bar() {
-
-	if (!current_user_can('administrator')) {
-
-	  show_admin_bar(false);
-
-	}
-
-}
-
-add_action('after_setup_theme', 'remove_admin_bar');
-
-
-
-/* Disable WP-Admin for untrusted users*/ 
-
-function prevent_admin_access(){
-
-	$file = basename($_SERVER['PHP_SELF']);
-
-	if ($file == 'wp-login.php' || is_admin() && !current_user_can('edit_posts') && $file != 'admin-ajax.php'){
-
-        wp_redirect(get_bloginfo('url').'/page-not-found');
-
-    }	
-
-   	if (false !==strpos( strtolower( $_SERVER['REQUEST_URI'] ),'/wp-admin' ) && !current_user_can('administrator') && false==strpos(strtolower($_SERVER['REQUEST_URI']),'admin-ajax.php' ) )
-
-          wp_redirect(get_bloginfo('url').'/page-not-found');
-
-}
-
-//add_action( 'init', 'prevent_admin_access'); 
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// Change excerpt from [...] to ...
-
-//////////////////////////////////////////////////////////////////
-
-function new_excerpt_more($more) {
-
-     global $post;
-
-	//return '... <a href="'. get_permalink($post->ID) . '">Read More &raquo;</a>';
-
-	return '...';
-
-}
-
-add_filter('excerpt_more', 'new_excerpt_more');
-
-
-
-remove_filter( 'the_excerpt', 'wpautop' );
-
-//////////////////////////////////////////////////////////////////
-
-// Change length of excerpt
-
-//////////////////////////////////////////////////////////////////
-
-function new_excerpt_length($length) {
-
-	global $post;
-
-	if ($post->post_type == 'news')
-
-		return 12;
-
-	else
-
-		return $length;
-
-}
-
-add_filter('excerpt_length', 'new_excerpt_length');
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// How comments are displayed
-
-//////////////////////////////////////////////////////////////////
-
-function site_comment($comment, $args, $depth) {
-
-	$GLOBALS['comment'] = $comment; ?>
-
-    <div class="auther_comment_box_div" id="comment-<?php comment_ID() ?>">
-
-  		<div class="default_pic_small"><?php echo get_avatar($comment,$size='60'); ?></div>
-
-  		<div class="author_comment_box_content">
-
-  			<div class="arrow"></div>
-
-  			<div class="author_comment_text"><a ><?php echo get_comment_author_link() ?></a> <span><?php printf(__('%1$s at %2$s'), get_comment_date(),  get_comment_time()) ?>-</span><?php edit_comment_link(__('Edit'),'  ','') ?> - <?php comment_reply_link(array_merge( $args, array('reply_text' => 'Reply', 'add_below' => $add_below, 'depth' => $depth, 'max_depth' => $args['max_depth']))) ?><br/><br/>
-
-            <?php if ($comment->comment_approved == '0') : ?>
-
-					<em><?php _e('Your comment is awaiting moderation.') ?></em>
-
-					<br />
-
-					<?php endif; ?>
-
-				<?php comment_text() ?>
-
-			</div>
-
-  		</div>
-
-  	</div>
-
-	
-
-<?php }
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// function to get favicon
-
-//////////////////////////////////////////////////////////////////
-
-function get_sd_favicon(){
-
-	if(get_option('sd_custom_favicon')){		
-
-		return '<link rel="shortcut icon" href="'.get_option('sd_custom_favicon').'" />';
-
-	}
-
-	else{		
-
-		return '<link rel="shortcut icon" href="'.get_bloginfo('template_url').'/images/favicon.png" />';
-
-	}
-
-}
-
-function sd_favicon(){
-
-	echo get_sd_favicon();
-
-}
-
-add_action('admin_head', 'sd_favicon');
-
-
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// functions social icons
-
-//////////////////////////////////////////////////////////////////
-
-function get_social_url($socialkey){		
-
-	if($socialkey=="twitter"){
-
-		$key='sd_twitter';
-
-		$url='http://www.twitter.com/[val]';
-
-	}elseif($socialkey=="facebook"){
-
-		$key='sd_facebook';
-
-		$url='http://www.facebook.com/[val]';
-
-	}elseif($socialkey=="flickr"){
-
-		$key='sd_flickr_userid';
-
-		$url='http://www.flickr.com/photos/[val]';
-
-	}elseif($socialkey=="gplus"){
-
-		$key='sd_googleplus';
-
-		$url='https://plus.google.com/[val]';
-
-	}elseif($socialkey=="skype"){
-
-		$key='sd_skype';
-
-		$url='skype:[val]?chat';
-
-	}elseif($socialkey=="email"){
-
-		$key='sd_email';
-
-		$url='mailto:[val]';
-
-	}
-
-	$val = stripslashes(get_option($key));
-
-	if($val)
-
-		return str_replace("[val]",$val,$url);
-
-	else
-
-		return 'javascript:void(0);';
-
-}
-
-
-
-function social_url($socialkey){
-
-	echo get_social_url($socialkey);
-
-}
-
-
-
-function contact_number(){
-
-	$val =stripslashes( get_option('sd_contact_number'));
-
-	echo $val;	
-
-}
-
-
-
-//////////////////////////////////////////////////////////////////
-
-// functions logo and tag
-
-//////////////////////////////////////////////////////////////////
-
-
-
-function get_the_logo(){
-
-	$imgs=array("png","PNG","jpg","JPG","gif","GIF","jpeg","JPEG","bmp","BMP");
-
-	if(get_option('sd_logo') && in_array(end(explode(".",stripslashes(get_option('sd_logo')))),$imgs)){
-
-		$logo_url=stripslashes(get_option('sd_logo'));
-
-	}else{
-
-		$logo_url=get_bloginfo('template_url').'/images/logo.png';	
-
-	}
-
-	$blogname=get_bloginfo('name');
-
-	return '<a href="'.get_bloginfo('url').'" title="'.$blogname.'"><img src="'.$logo_url.'"  alt="'.$blogname.'" /></a>';
-
-}
-
-function the_logo(){
-
-	echo get_the_logo();
-
-}
-
-
-
-////////////////////////////////////
-
-// Pagination
-
-////////////////////////////////////
-
-function show_pagination(){
-
-	global $wp_query;
-
-	if ($wp_query->max_num_pages> 1 ) :
-
-	global $wp_rewrite;
-
-		 $pagination_args = array(
-
-		'base' => @add_query_arg('paged','%#%'),
-
-		'format' => '',
-
-		'current' => max( 1, get_query_var('paged') ),
-
-		'total' => $wp_query->max_num_pages,
-
-		'prev_next'    => true,
-
-    	'prev_text'    => __('&laquo; '),
-
-    	'next_text'    => __('&raquo;'),);	
-
-	if( $wp_rewrite->using_permalinks() ){
-
-	 	$pagination_args['base'] = user_trailingslashit( trailingslashit( remove_query_arg('s',get_pagenum_link(1) ) ) . 'page/%#%/', 'paged');
-
-		if( !empty($wp_query->query_vars['s']) )
-
-	 		$pagination_args['add_fragment'] = '?s='.get_query_var('s');
-
-		$lnk=paginate_links($pagination_args);
-
-		echo '<div class="pagination"><span class="pages">Pages</span>'.$lnk.'</div>';
-
-	}else{
-
-		if( !empty($wp_query->query_vars['s']) )
-
-	 	$pagination_args['add_args'] = array('s'=>get_query_var('s'));
-
-		echo '<div class="pagination"><span class="pages">Pages</span>'.paginate_links( $pagination_args ).'</div>';
-
-	}
-
-	  
-
-	endif;	
-
-}
-
-
-
-
-
-////////////////////////////////////
-
-// Validations
-
-////////////////////////////////////
-
-function valid_url($url){
-
-	if(!filter_var($url, FILTER_VALIDATE_URL)){ 
-
-  		return false;
-
- 	}else{
-
-		return true;
-
-	}
-
-}
-
-
-
-////////////////////////////////////
-
-// URL functions
-
-////////////////////////////////////
-
-function get_url($url , $params=array()){
-
-	$sp=(strpos($url,'?')>0)?'&':'?';
-
-	if(count($params)>0){
-
-		$vars=array();
-
-		foreach($params as $k=>$param){
-
-			$vars[]=$k.'='.$param;
-
-		}
-
-		$string=implode("&",$vars);
-
-		return $url.=$sp.$string;
-
-	}
-
-	else return $url;
-
-}
-
-
-
-
-
-function get_page_url($page , $params=array()){
-
-	$p=get_page_by_path($page);
-
-	$url=get_permalink($p->ID);	
-
-	$url=get_url($url,$params);
-
-	return $url;
-
-}
-
-function page_url($page_slug, $params=array()){
-
-	echo get_page_url($page_slug,$params);
-
-}
-
-
-
-function redirect_to($page , $params=array()){
-
-	wp_redirect(get_url(get_page_url($page),$params));
-
-}
-
-
-
-
-
-function sd_show_message($message='',$type="success",$align='left',$show_type=true){
-
-	if(!empty($message)){
-
-		$str='<div class="alert-box '.$type.'">';
-
-		if($show_type)
-
-			$str.='<span>'.strtoupper($type).': </span>';
-
-		$str.=$message.'</div>';
-
-		echo $str;
-
-	}
-
-}
-
-
-
-function page_only_visible($when){
-
-	if($when=="before-login"){
-
-		if(is_user_logged_in())
-
-			wp_redirect(get_page_url('dashboard'));
-
-	}elseif($when=="after-login"){
-
-		if(!is_user_logged_in()){
-
-			$rurl=end(explode("?",$_SERVER['REQUEST_URI']));
-
-			$rurl=urlencode(get_permalink());
-
-			wp_redirect(home_url());
-
-		}
-
-	}
-
-}
-
-function random_string($length) {
-
-    $key = '';
-
-    $keys = array_merge(range(0, 9), range('a', 'z'));
-
-    for ($i = 0; $i < $length; $i++) {
-
-        $key .= $keys[array_rand($keys)];
-
-    }
-
-    return $key;
-
-}
-
-
-
-function head_script(){
-
-	if(is_front_page()){		
-
-	}
-
-}
-
-add_action('wp_footer','head_script',20);
-
-
-
-function footer_script(){
-
-	$google_analytics = get_option('sd_google_analytics'); 
-
-	if ($google_analytics)echo stripslashes($google_analytics);
-
-}
-
-add_action('wp_footer','footer_script');
-
-
-
-function formatWithSuffix($input){
-
-    $suffixes = array('', 'K', 'M', 'G', 'T');
-
-    $suffixIndex = 0;
-
-    while(abs($input) >= 1000 && $suffixIndex < sizeof($suffixes))    {
-
-        $suffixIndex++;
-
-        $input /= 1000;
-
-	}
-
-    return (($input > 0)? floor($input * 10) / 10: ceil($input * 10) / 10). $suffixes[$suffixIndex];
-
-}
-
-function frontend_pagination( $total_record, $page_name ){
-	$current_page = (get_query_var('paged'))?get_query_var('paged'):'1';
-	$per_page = 30;
-	$j2c_tv = (int) $total_record; 
-	$total_rows = ceil( $j2c_tv/$per_page ); 
-	$search = ($_REQUEST['search']) ?'?search='.$_REQUEST['search']:'';
-	
-	if( $_REQUEST['from_date'] && $_REQUEST['to_date']){
-		if($_REQUEST['search']){
-			$search .='&from_date='.$_REQUEST['from_date'].'&to_date='.$_REQUEST['to_date'];
-		}else{
-			$search .='?from_date='.$_REQUEST['from_date'].'&to_date='.$_REQUEST['to_date'];
-		}
-	}
-	if( $_REQUEST['client_id'] ){
-		if($search)
-			$search .= '&client_id='.$_REQUEST['client_id'];
-		else
-			$search = '?client_id='.$_REQUEST['client_id'];	
-	}
-	if( $_REQUEST['vehicle_id'] ){
-		if($search)
-			$search .= '&vehicle_id='.$_REQUEST['vehicle_id'];
-		else	
-			$search .= '?vehicle_id='.$_REQUEST['vehicle_id'];
-	}
-	if( $_REQUEST['transaction_type'] ){
-		if($search)
-			$search .= '&transaction_type='.$_REQUEST['transaction_type'];
-		else
-			$search = '?transaction_type='.$_REQUEST['transaction_type'];
-	}
-	
-	if( $total_rows > 0  ){
-		$page_url =  get_bloginfo('url')."/".$page_name."/";
-		$last = $total_rows;
-		$links = 2;
-		$start = ( ( $current_page - $links ) > 0 ) ? ( $current_page - $links ) : 1;
-		$end = ( ( $current_page + $links ) < $last ) ? ( $current_page + $links ) : $last;
-		
-		$html = '<ul>';
-		$class = ( $current_page == 1 ) ? "disabled" : "";
-		$html.= '<li class="' . $class . '"><a href="'.$page_url.'page/' . ( $current_page - 1 ) .$search. '">Prev</a></li>';
-		if ( $start > 1 ) {
-			$html.= '<li><a href="'.$page_url.'page/1'.$search.'">1</a></li>';
-			$html.= '<li><a href="javascript:void(0);">...</a></li>';
-		}
-		for ( $i = $start ; $i <= $end; $i++ ) {
-			$class  = ( $current_page == $i ) ? "active" : "";
-			$html.= '<li><a class="'.$class.'" href="'.$page_url.'page/'.$i.$search.'">'.$i.'</a></li>';
-		}
-		if ( $end < $last ) {
-			$html.= '<li><a href="javascript:void(0);">...</a></li>';
-			$html.= '<li><a href="'.$page_url.'page/' . $last.$search. '">' . $last . '</a></li>';
-		}
-		$class = ( $current_page == $last ) ? "disabled" : "";
-		$html.= '<li class="' . $class . '"><a href="'.$page_url.'page/' . ( $current_page + 1 ).$search.'">Next</a></li>';
-		$html.= '</ul>';
-		return $html;
-	}else{
-		return '';
-	}
-}
+endif; // vmstheme_setup
+add_action( 'after_setup_theme', 'vmstheme_setup' );
+/*Add Option TO Custom Field*/
 if( function_exists('acf_add_options_page') ) {
 
-	acf_add_options_page('Theme Settings');
-}
-/*booking form*/
-
-
-add_action('wp_ajax_makeBooking', 'makeBooking');
-add_action('wp_ajax_nopriv_makeBooking', 'makeBooking'); 
-
-
-function makeBooking(){
-	print_r($_POST);
-	///exit;
-	echo "hello123";
-    global $wpdb;
-
-    $bedrooms   = $_POST["bedrooms"];
-    $bathrooms     = $_POST["bathrooms"];
-    $services   = $_POST["services"];
-    $weeks   = $_POST["weeks"];
-      
-    $sql = "INSERT INTO `pc_instant_quote`
-          (`bedrooms`,`bathrooms`,`services`,`weeks`) 
-   values ($bedrooms, $bathrooms, $services, $weeks)";
-
-   $wpdb->query($sql);
-    die();
+    acf_add_options_page();
+    
 }
 
-/*booking form*/
-
-
-
-/*
-* Creating a function to create our CPT
-*/
- 
-function custom_post_type_products() {
- 
-// Set UI labels for Custom Post Type
+/**
+*Custom Post Testimonial
+**/
+add_action( 'init', 'vms_testimonial_init' );
+function vms_testimonial_init() {
     $labels = array(
-        'name'                => _x( 'Products', 'Post Type General Name', 'twentythirteen' ),
-        'singular_name'       => _x( 'Product', 'Post Type Singular Name', 'twentythirteen' ),
-        'menu_name'           => __( 'Products', 'twentythirteen' ),
-        'parent_item_colon'   => __( 'Parent Product', 'twentythirteen' ),
-        'all_items'           => __( 'All Products', 'twentythirteen' ),
-        'view_item'           => __( 'View Product', 'twentythirteen' ),
-        'add_new_item'        => __( 'Add New Product', 'twentythirteen' ),
-        'add_new'             => __( 'Add New', 'twentythirteen' ),
-        'edit_item'           => __( 'Edit Product', 'twentythirteen' ),
-        'update_item'         => __( 'Update Product', 'twentythirteen' ),
-        'search_items'        => __( 'Search Product', 'twentythirteen' ),
-        'not_found'           => __( 'Not Found', 'twentythirteen' ),
-        'not_found_in_trash'  => __( 'Not found in Trash', 'twentythirteen' ),
+        'name'               => _x( 'Testimonial', 'post type general name', 'your-plugin-textdomain' ),
+        'singular_name'      => _x( 'Testimonial', 'post type singular name', 'your-plugin-textdomain' ),
+        'menu_name'          => _x( 'Testimonial', 'admin menu', 'your-plugin-textdomain' ),
+        'name_admin_bar'     => _x( 'Testimonial', 'add new on admin bar', 'your-plugin-textdomain' ),
+        'add_new'            => _x( 'Add New Testimonial', 'bottomgallery', 'your-plugin-textdomain' ),
+        'add_new_item'       => __( 'Testimonial', 'your-plugin-textdomain' ),
+        'new_item'           => __( 'Testimonial', 'your-plugin-textdomain' ),
+        'edit_item'          => __( 'Edit Testimonial', 'your-plugin-textdomain' ),
+        'view_item'          => __( 'View Testimonial', 'your-plugin-textdomain' ),
+        'all_items'          => __( 'All Testimonial', 'your-plugin-textdomain' ),
+        'search_items'       => __( 'Search Testimonial', 'your-plugin-textdomain' ),
+        'parent_item_colon'  => __( 'Parent Testimonial:', 'your-plugin-textdomain' ),
+        'not_found'          => __( 'No Testimonial found.', 'your-plugin-textdomain' ),
+        'not_found_in_trash' => __( 'No Testimonial found in Trash.', 'your-plugin-textdomain' ),
     );
-     
-// Set other options for Custom Post Type
-     
+
     $args = array(
-        'label'               => __( 'Products', 'twentythirteen' ),
-        'description'         => __( 'Product news and reviews', 'twentythirteen' ),
-        'labels'              => $labels,
-        // Features this CPT supports in Post Editor
-        'supports'            => array( 'title', 'editor', 'excerpt', 'author', 'thumbnail', 'comments', 'revisions', 'custom-fields', ),
-        // You can associate this CPT with a taxonomy or custom taxonomy. 
-        'taxonomies'          => array( 'genres' ),
-        /* A hierarchical CPT is like Pages and can have
-        * Parent and child items. A non-hierarchical CPT
-        * is like Posts.
-        */ 
-        'hierarchical'        => false,
-        'public'              => true,
-        'show_ui'             => true,
-        'show_in_menu'        => true,
-        'show_in_nav_menus'   => true,
-        'show_in_admin_bar'   => true,
-        'menu_position'       => 5,
-        'can_export'          => true,
-        'has_archive'         => true,
-        'exclude_from_search' => false,
-        'publicly_queryable'  => true,
-        'capability_type'     => 'page',
+        'labels'             => $labels,
+        'public'             => true,
+        'publicly_queryable' => true,
+        'show_ui'            => true,
+        'show_in_menu'       => true,
+        'query_var'          => true,
+        'rewrite'            => array( 'slug' => 'testimonial','taxonomy'=>'testimonial' ),
+        'capability_type'    => 'post',
+        'has_archive'        => true,
+        'hierarchical'       => false,
+        'menu_position'      => 6,
+        
+        
+        'supports'           => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'comments','custom-fields','page-attributes')
     );
-     
-    // Registering your Custom Post Type
-    register_post_type( 'products', $args );
- 
+
+register_post_type( 'testimonial', $args );  
 }
- 
-/* Hook into the 'init' action so that the function
-* Containing our post type registration is not 
-* unnecessarily executed. 
-*/
- 
-add_action( 'init', 'custom_post_type_products', 0 );
+/**
+*Custom Post Brand
+**/
+add_action( 'init', 'vms_brand_init' );
+function vms_brand_init() {
+    $labels = array(
+        'name'               => _x( 'Brand', 'post type general name', 'your-plugin-textdomain' ),
+        'singular_name'      => _x( 'Brand', 'post type singular name', 'your-plugin-textdomain' ),
+        'menu_name'          => _x( 'Brand', 'admin menu', 'your-plugin-textdomain' ),
+        'name_admin_bar'     => _x( 'Brand', 'add new on admin bar', 'your-plugin-textdomain' ),
+        'add_new'            => _x( 'Add New Brand', 'bottomgallery', 'your-plugin-textdomain' ),
+        'add_new_item'       => __( 'Brand', 'your-plugin-textdomain' ),
+        'new_item'           => __( 'Brand', 'your-plugin-textdomain' ),
+        'edit_item'          => __( 'Edit Brand', 'your-plugin-textdomain' ),
+        'view_item'          => __( 'View Brand', 'your-plugin-textdomain' ),
+        'all_items'          => __( 'All Brand', 'your-plugin-textdomain' ),
+        'search_items'       => __( 'Search Brand', 'your-plugin-textdomain' ),
+        'parent_item_colon'  => __( 'Parent Brand:', 'your-plugin-textdomain' ),
+        'not_found'          => __( 'No Brand found.', 'your-plugin-textdomain' ),
+        'not_found_in_trash' => __( 'No Brand found in Trash.', 'your-plugin-textdomain' ),
+    );
+
+    $args = array(
+        'labels'             => $labels,
+        'public'             => true,
+        'publicly_queryable' => true,
+        'show_ui'            => true,
+        'show_in_menu'       => true,
+        'query_var'          => true,
+        'rewrite'            => array( 'slug' => 'brand','taxonomy'=>'brand' ),
+        'capability_type'    => 'post',
+        'has_archive'        => true,
+        'hierarchical'       => false,
+        'menu_position'      => 6,
+        
+        
+        'supports'           => array( 'title', 'author', 'thumbnail','custom-fields','page-attributes')
+    );
+
+register_post_type( 'brand', $args );  
+}
 
 
+//Add Registration Form //
+add_action( 'wp_ajax_partner_submit_data', 'partner_submit_data' );
+add_action('wp_ajax_nopriv_partner_submit_data', 'partner_submit_data');
+function partner_submit_data(){
 
+        $business_name = $_REQUEST['business_name'];
+        $first_name = $_REQUEST['first_name'];
+        $last_name = $_REQUEST['last_name'];
+        $displayname = $first_name.' '.$last_name;
+        $apt_no = $_REQUEST['apt_no'];
+        $street_name = $_REQUEST['street_name'];
+        $city_name = $_REQUEST['city_name'];
+        $country_name = $_REQUEST['country_name'];
+        $phone_number = $_REQUEST['phone_number'];
+        $user_password = $_REQUEST['user_password'];
+        $email_address = $_REQUEST['email_address'];
+        $user_type = $_REQUEST['user_type'];
+        $created_date = date('Y-m-d H:i:s');
+       
+        global $wpdb;
+        $tab1 = $wpdb->prefix.'users';
+        $datum = $wpdb->get_results("SELECT * FROM $tab1 WHERE user_email = '".$email_address."'");
+        if($wpdb->num_rows > 0) { 
+            echo "<p style='color:red;'>Email Already Exist</p>";    
+            exit;
+        } 
+        else 
+        {        
+            //$user_id = wp_create_user( $email_address, $user_password, $email_address );
+            $partnerdata = array(
+                'user_login'  =>  $email_address,
+                'user_pass' =>   $user_password,
+                'display_name'=> $displayname ,
+                'user_nicename'=> $displayname,
+                'user_email'=>  $email_address,
+                'role' => $user_type
+            );            
+            $user_id = wp_insert_user( $partnerdata ) ;
+            $user = new WP_User($user_id);
+            $auser = get_user_by( 'ID', $user_id );
+            $auser->set_role( '' );
+            $auser->add_role( $user_type );
+
+            echo '<p style="color:green;">Registration successful! Click <a style="color:#922B5F" href='.home_url('sign-in').'>here</a> to continue</p>';
+
+            add_user_meta( $user_id, '_businessname', $business_name);
+            add_user_meta( $user_id, '_aptno', $apt_no);
+            add_user_meta( $user_id, '_streetname', $street_name);
+            add_user_meta( $user_id, '_cityname', $city_name);
+            add_user_meta( $user_id, '_countryname', $country_name);
+            add_user_meta( $user_id, '_phonenumber', $phone_number);
+            add_user_meta( $user_id, '_usertype', $user_type );
+            update_user_meta( $user_id, '_userpassword', $user_password );
+
+            update_user_meta( $user_id, 'first_name', $first_name );
+            update_user_meta( $user_id, 'last_name', $last_name );
+
+            $partner_detail = get_userdata( $user_id );
+            $partneremail = $partner_detail->data->user_email;
+            $partnername = $partner_detail->data->display_name;
+
+            $html_partner_user = _partner_result_template_user($user_id);
+            $subject = 'Registration Details';
+            _do_mail( $partneremail , $subject , $html_partner_user );
+            //echo $html_partner_user;
+
+            $html_partner_admin = _partner_result_template_admin($user_id);
+            $subject1 = 'Registration Details of '.$partnername;
+            $admin_email = get_option('admin_email');
+            _do_mail( $admin_email , $subject1 , $html_partner_admin );
+            //echo $html_partner_admin;
+            exit;
+        }   
+}
+
+function _do_mail($to,$sub,$body,$attachment=false){
+    $admin_email = get_option('admin_email');
+    $admin = 'Virtual Post Jamaica';
+        $headers = 'From: '.$admin.' '.' <'.$admin_email.'>' . "\r\n" .
+        'Content-Type: text/html' . "\r\n" .
+        'X-Mailer: PHP/' . phpversion();
+        if($attachment){
+            wp_mail($to , $sub , $body , $headers , $attachment);
+        }else{
+            wp_mail($to , $sub , $body , $headers );
+        }
+        
+}
+
+//Customer Sign UP//
+add_action( 'wp_ajax_customer_submit_data', 'customer_submit_data' );
+add_action('wp_ajax_nopriv_customer_submit_data', 'customer_submit_data');
+function customer_submit_data(){
+
+        $cust_first_name = $_REQUEST['cust_first_name'];
+        $cust_last_name = $_REQUEST['cust_last_name'];
+        $cust_password = $_REQUEST['cust_password'];
+        $displayname1 = $cust_first_name.' '.$cust_last_name;
+        $cust_email_address = $_REQUEST['cust_email_address'];        
+        $cust_company_name = $_REQUEST['cust_company_name'];
+        $cust_phone_number = $_REQUEST['cust_phone_number'];
+        $cust_apt_no = $_REQUEST['cust_apt_no'];
+        $cust_street_address = $_REQUEST['cust_street_address'];
+        $cust_town = $_REQUEST['cust_town'];
+        $cust_country = $_REQUEST['cust_country'];
+        $user_type = $_REQUEST['user_type'];
+        $created_date = date('Y-m-d H:i:s');
+       
+        global $wpdb;
+        $tab2 = $wpdb->prefix.'users';
+        $datum = $wpdb->get_results("SELECT * FROM $tab2 WHERE user_email = '".$cust_email_address."'");
+        if($wpdb->num_rows > 0) { 
+            echo "<p style='color:red;'>Email Already Exist</p>";    
+            exit;
+        } 
+        else 
+        {
+        
+            //$cust_id = wp_create_user( $cust_email_address, $cust_password, $cust_email_address );
+            $customerdata = array(
+                'user_login'  =>  $cust_email_address,
+                'user_pass' =>   $cust_password,
+                'display_name'=> $displayname1 ,
+                'user_nicename'=> $displayname1,
+                'user_email'=>  $cust_email_address,
+                'role' => $user_type
+            ); 
+            $cust_id = wp_insert_user( $customerdata ) ;
+            $user = new WP_User($cust_id);
+            $customer_role = get_user_by( 'ID', $cust_id );
+            $customer_role->set_role( '' );
+            $customer_role->add_role( $user_type );
+
+             echo '<p style="color:green;">Registration successful! Click <a style="color:#922B5F" href='.home_url('sign-in').'>here</a> to continue</p>';
+
+            add_user_meta( $cust_id, '_companyname', $cust_company_name);
+            add_user_meta( $cust_id, '_phonenumber', $cust_phone_number);
+            add_user_meta( $cust_id, '_aptno', $cust_apt_no);
+            add_user_meta( $cust_id, '_streetname', $cust_street_address);
+            add_user_meta( $cust_id, '_cityname', $cust_town);
+            add_user_meta( $cust_id, '_countryname', $cust_country);
+            add_user_meta( $cust_id, '_usertype', $user_type );
+            update_user_meta( $cust_id, '_userpassword', $cust_password );
+            update_user_meta( $cust_id, 'first_name', $cust_first_name );
+            update_user_meta( $cust_id, 'last_name', $cust_last_name );
+
+            $customer_detail = get_userdata( $cust_id );
+            $customeremail = $customer_detail->data->user_email;
+            $customername = $customer_detail->data->display_name;
+
+            $html_customer_user = _customer_result_template_user($cust_id);
+            $subject2 = 'Registration Details';
+            _do_mail_customer( $customeremail , $subject2 , $html_customer_user );
+
+            $html_customer_admin = _customer_result_template_admin($cust_id);
+            $subject3 = 'Registration Details of '.$customername;
+            $admin_email = get_option('admin_email');
+            _do_mail_customer( $admin_email , $subject3 , $html_customer_admin );
+            exit;
+        }   
+}
+
+function _do_mail_customer($to,$sub,$body,$attachment=false){
+    $admin_email = get_option('admin_email');
+    $admin = 'Virtual Post Jamaica';
+        $headers = 'From: '.$admin.' '.' <'.$admin_email.'>' . "\r\n" .
+        'Content-Type: text/html' . "\r\n" .
+        'X-Mailer: PHP/' . phpversion();
+        if($attachment){
+            wp_mail($to , $sub , $body , $headers , $attachment);
+        }else{
+            wp_mail($to , $sub , $body , $headers );
+        }
+        
+}
+
+add_action("pmpro_checkout_before_submit_button", 'add_bank_tarnsfer_btn');
+function add_bank_tarnsfer_btn(){
+    $memberid = $_REQUEST['level'];
+    global $current_user; 
+    $currentuserid = $current_user->ID;
 ?>
+<style type="text/css">
+    .pmpro_submit{display: none;}
+</style>
+<link href="<?php echo get_template_directory_uri(); ?>/css/card-js.min.css" rel="stylesheet" type="text/css" />
+<script src="<?php echo get_template_directory_uri(); ?>/js/card-js.min.js"></script>
+<div id="payment_list">
+    <select id="types_of_payment" class="make_payment">
+        <option value="">Make Payment</option>
+        <option value="Paypal">Pay By Paypal</option>
+        <option value="Bank">Bank Transfer</option>
+    </select>
+</div>
+<div class="bank_payment" style="display: none;">
+    <select class="pmpro_btn_select" name="bank_type" id="bank_type" class="required">
+        <option value="">Direct Deposit</option>
+        <option value="Sagicor">Sagicor Bank</option>
+        <!--<option value="Manor Park">Manor Park Branch</option>-->
+    </select>
+    <input type="hidden" name="memberid" id="memberid" value="<?php echo $memberid; ?>">
+    <input type="hidden" name="currentuserid" id="currentuserid" value="<?php echo $currentuserid; ?>">
+    <input type="submit" id="submitbutton" value="Submit">
+
+    <?php 
+    global $wpdb;   
+    $tab56 = $wpdb->prefix.'direct_transfer';
+    $single_result12 = $wpdb->get_row("SELECT * FROM $tab56 WHERE id=1");
+    $sagicor_content = $single_result12->sagicor_bank;
+    $manor_content = $single_result12->manor_bank;
+    ?>
+    <div class="sagicor" style="display: none;"><?php echo $sagicor_content; ?></div>
+    <div class="manor" style="display: none;"><?php echo $manor_content; ?></div>    
+</div>
+
+<script type="text/javascript">
+    jQuery(document).ready(function(){
+        jQuery("select.make_payment").change(function(){
+            var selectedevent1 = jQuery(this).children("option:selected").val();
+            
+            if( selectedevent1 == 'Paypal' )
+            {
+                jQuery('div.bank_payment').hide();
+                jQuery('div.pmpro_submit').show();
+            }
+            if( selectedevent1 == 'Bank' )
+            {
+                jQuery('div.bank_payment').show();
+                jQuery('div.pmpro_submit').hide();
+            }
+            if( selectedevent1 == '' )
+            {
+                jQuery('div.bank_payment').hide();
+                jQuery('div.pmpro_submit').hide();
+            }
+        });
+
+        jQuery("select.pmpro_btn_select").change(function(){
+            var selectedevent = jQuery(this).children("option:selected").val();
+            if( selectedevent == 'Sagicor' )
+            {
+                jQuery('div.manor').hide();
+                jQuery('div.sagicor').show();
+            }
+            if( selectedevent == 'Manor Park' )
+            {
+                jQuery('div.manor').show();
+                jQuery('div.sagicor').hide();
+            }
+            if( selectedevent == '' )
+            {
+                jQuery('div.manor').hide();
+                jQuery('div.sagicor').hide();
+            }
+        });
+
+        jQuery("#submitbutton").on('click', function(e) {
+            var bank_type = jQuery('#bank_type').val();
+            if (bank_type == "") {
+                alert("Please select an option!");
+                return false;
+            }
+            //return true;
+
+            if (confirm('Are you sure to bank deposite?')) {
+                var memberid = jQuery('#memberid').val();
+                var currentuserid = jQuery('#currentuserid').val();
+                var ajaxurl = "<?php echo admin_url('admin-ajax.php'); ?>";
+                e.preventDefault();
+
+                var data = {'memberid':memberid,
+                    'currentuserid':currentuserid,
+                    'bank_type':bank_type,
+                    'action':'direct_bank_tranfer'};
+
+                jQuery.ajax({
+                    url: ajaxurl,     
+                    data: data,
+                    type : 'POST',
+                    success:function(response) {                     
+                        
+                    if(response == 0) 
+                        {
+                        //alert("You will now be redirected.");
+                        window.location = "<?php echo home_url('/thank-you/'); ?>";
+                        }                        
+                    console.log(response);
+                    }
+                }); 
+            } else {
+                return false;
+            }
+        });        
+    });
+    
+</script>
+<?php }
+
+//Direct Bank Transfer//
+add_action( 'wp_ajax_direct_bank_tranfer', 'direct_bank_tranfer' );
+add_action('wp_ajax_nopriv_direct_bank_tranfer', 'direct_bank_tranfer');
+function direct_bank_tranfer(){
+    $memberid = $_REQUEST['memberid'];
+    $currentuserid = $_REQUEST['currentuserid'];
+    $bank_type = $_REQUEST['bank_type'];
+    $randomcode = genarate_code(10);
+    
+    global $wpdb;
+    $level_tab = $wpdb->prefix.'pmpro_membership_levels';
+    $level_result = $wpdb->get_row("SELECT * FROM $level_tab WHERE id = '".$memberid."'");
+    $initialpayment = $level_result->initial_payment;
+
+    $tab_trans = $wpdb->prefix.'bank_transfer';
+    $wpdb->insert( $tab_trans, array( 'membershipid' => $memberid, 'userid' => $currentuserid, 'total_amount' => $initialpayment, 'bank_type' => $bank_type, 'status' => 'Pending', 'user_registered' => date('Y-m-d H:i:s')  ) );
+    //print_r($wpdb->last_query);    
+
+    $order_tab = $wpdb->prefix.'pmpro_membership_orders';
+    $chkoutrow = $wpdb->get_row( "SELECT checkout_id FROM $order_tab ORDER BY checkout_id DESC limit 1");
+    $last_checkoutid = $chkoutrow->checkout_id;
+    $checkoutid = ($last_checkoutid + 1);
+    $wpdb->insert( $order_tab, array( 'code' => $randomcode, 'user_id' => $currentuserid, 'membership_id' => $memberid, 'subtotal' => $initialpayment, 'status' => 'pending', 'checkout_id' => $checkoutid, 'gateway' => 'banktransfer', 'total' => $initialpayment, 'payment_type' => $bank_type, 'timestamp' => date('Y-m-d H:i:s')  ) );
+
+    return true;
+    exit;
+}
+
+//Random number generate
+function genarate_code($length_of_string)
+{
+    $str_result = '0123456789ABCDEF'; 
+    return substr(str_shuffle($str_result), 0, $length_of_string);
+}
+
+//admin menu for Employee
+add_action( 'admin_menu', 'emp_admin_menu');    
+function emp_admin_menu() {
+    
+    if ( current_user_can( 'administrator' ) ) {
+        add_submenu_page( 'pmpro-dashboard', 'Bank Details', 'Bank Details', 'manage_options' , 'bank-details',  'fn_bank_details' );
+    }
+}
+function fn_bank_details(){
+    include('bank_details.php');
+}
+
+
+add_action( 'edit_page_form', 'my_first_editor' );
+function my_first_editor() {
+    // $args= array( 
+    // 'textarea_rows' => 10
+    // );
+    global $wpdb;   
+    $tab2 = $wpdb->prefix.'direct_transfer';
+    $single_result = $wpdb->get_row("SELECT * FROM $tab2 WHERE id=1");
+    $sagicor_content = $single_result->sagicor_bank;
+    wp_editor( $sagicor_content, 'sagicorbank_details' );
+}
+add_action( 'edit_page_form', 'my_second_editor' );
+function my_second_editor() {
+    global $wpdb;   
+    $tab2 = $wpdb->prefix.'direct_transfer';
+    $single_result1 = $wpdb->get_row("SELECT * FROM $tab2 WHERE id=1");
+    $manor_content = $single_result1->manor_bank;
+    wp_editor( $manor_content, 'manorbank_details' );
+}
+
+add_action( 'wp_ajax_bank_details', 'bank_details' );
+add_action('wp_ajax_nopriv_bank_details', 'bank_details');
+function bank_details(){
+    $sagicorbank_details = $_REQUEST['sagicorbank_details'];
+    $manorbank_details = $_REQUEST['manorbank_details'];
+
+    global $wpdb;
+    $bank_trans = $wpdb->prefix.'direct_transfer';
+    $wpdb->update( $bank_trans, array( 'sagicor_bank' => $sagicorbank_details, 'manor_bank' => $manorbank_details ), array( 'id' => 1 ) );
+    
+    echo '<p style="color:green;">Data Updated</p>';
+    exit();
+}
+/*disable plugin updates*/
+function my_filter_plugin_updates( $value ) {
+   if( isset( $value->response['paid-memberships-pro/paid-memberships-pro.php'] ) ) {        
+      unset( $value->response['paid-memberships-pro/paid-memberships-pro.php'] );
+    }
+    return $value;
+ }
+ add_filter( 'site_transient_update_plugins', 'my_filter_plugin_updates' );
+ 
+ /*disable plugin updates*/
